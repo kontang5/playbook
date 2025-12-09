@@ -11,7 +11,7 @@
 set -e
 
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
-    -- Observer role for monitoring (postgres-exporter)
+    -- Observer role for monitoring (otel-collector postgresql receiver)
     CREATE ROLE observer WITH LOGIN PASSWORD '$POSTGRES_OBSERVER_PASSWORD';
 
     -- Grant monitoring permissions
@@ -21,6 +21,7 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
 
     -- Demo app database and user
     CREATE DATABASE $POSTGRES_DEMO_DB;
+    GRANT CONNECT ON DATABASE $POSTGRES_DEMO_DB TO observer;
     CREATE ROLE $POSTGRES_DEMO_USER WITH LOGIN PASSWORD '$POSTGRES_DEMO_PASSWORD';
     GRANT ALL PRIVILEGES ON DATABASE $POSTGRES_DEMO_DB TO $POSTGRES_DEMO_USER;
 EOSQL
