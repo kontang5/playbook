@@ -1,10 +1,35 @@
-// Load instrumentation first
-require('./instrumentation');
+// Load telemetry first
+const { loggerProvider } = require('./telemetry');
 
 const express = require('express');
 const { Pool } = require('pg');
 const { trace, metrics, SpanStatusCode } = require('@opentelemetry/api');
+const { logs, SeverityNumber } = require('@opentelemetry/api-logs');
 const winston = require('winston');
+
+// OTEL logger for sending logs to collector
+const otelLogger = loggerProvider.getLogger('backend');
+
+// Winston transport that sends logs to OTEL
+class OTelTransport extends winston.Transport {
+  log(info, callback) {
+    const severityMap = {
+      error: SeverityNumber.ERROR,
+      warn: SeverityNumber.WARN,
+      info: SeverityNumber.INFO,
+      debug: SeverityNumber.DEBUG,
+    };
+
+    otelLogger.emit({
+      severityNumber: severityMap[info.level] || SeverityNumber.INFO,
+      severityText: info.level.toUpperCase(),
+      body: info.message,
+      attributes: { ...info, level: undefined, message: undefined },
+    });
+
+    callback();
+  }
+}
 
 // Logger setup
 const logger = winston.createLogger({
@@ -16,6 +41,7 @@ const logger = winston.createLogger({
   defaultMeta: { service: 'backend' },
   transports: [
     new winston.transports.Console(),
+    new OTelTransport(),
   ],
 });
 
