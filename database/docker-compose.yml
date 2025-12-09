@@ -1,0 +1,44 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_OBSERVER_PASSWORD: ${POSTGRES_OBSERVER_PASSWORD}
+      POSTGRES_DEMO_DB: ${POSTGRES_DEMO_DB}
+      POSTGRES_DEMO_USER: ${POSTGRES_DEMO_USER}
+      POSTGRES_DEMO_PASSWORD: ${POSTGRES_DEMO_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - postgres-logs:/var/log/postgresql
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+      - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    networks:
+      - db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "1m"
+        max-file: "1"
+    restart: unless-stopped
+
+networks:
+  db:
+    external: true
+    name: db-network
+
+volumes:
+  postgres-data:
+    external: true
+    name: postgres-data
+  postgres-logs:
+    external: true
+    name: postgres-logs
