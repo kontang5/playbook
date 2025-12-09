@@ -51,11 +51,14 @@ const sdk = new NodeSDK({
 
 sdk.start();
 
-process.on('SIGTERM', () => {
+const shutdown = () => {
   sdk.shutdown()
     .then(() => console.log('OTEL SDK shut down'))
     .catch((err) => console.error('Error shutting down SDK', err))
     .finally(() => process.exit(0));
-});
+};
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
 
 module.exports = { loggerProvider };
