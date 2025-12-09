@@ -1,0 +1,143 @@
+receivers:
+  # Logs from PostgreSQL files (JSON format)
+  filelog/postgres:
+    include:
+      - /logs/postgres/*.log
+    start_at: end
+    operators:
+      - type: json_parser
+        timestamp:
+          parse_from: attributes.timestamp
+          layout: "%Y-%m-%d %H:%M:%S.%f %Z"
+    attributes:
+      source: postgresql
+
+  # Logs from Nginx access log (JSON format)
+  filelog/nginx:
+    include:
+      - /logs/nginx/access.log
+    start_at: end
+    operators:
+      - type: json_parser
+        timestamp:
+          parse_from: attributes.time
+          layout: "%Y-%m-%dT%H:%M:%S%z"
+    attributes:
+      source: nginx-access
+
+  # Logs from Nginx error log (plain text)
+  filelog/nginx-error:
+    include:
+      - /logs/nginx/error.log
+    start_at: end
+    attributes:
+      source: nginx-error
+
+  # OTLP from backend API (logs, metrics, traces)
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+  # PostgreSQL metrics
+  postgresql:
+    endpoint: postgres:5432
+    username: observer
+    password: ${POSTGRES_OBSERVER_PASSWORD}
+    databases:
+      - postgres
+      - demo
+    collection_interval: 30s
+    tls:
+      insecure: true
+
+  # Nginx metrics (stub_status)
+  nginx:
+    endpoint: http://nginx:8080/stub_status
+    collection_interval: 30s
+
+  # Container metrics
+  docker_stats:
+    endpoint: unix:///var/run/docker.sock
+    collection_interval: 30s
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+processors:
+  batch:
+    timeout: 10s
+    send_batch_size: 1000
+
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 256
+    spike_limit_mib: 64
+
+  resource:
+    attributes:
+      - key: service.namespace
+        value: playbook
+        action: upsert
+
+exporters:
+  otlphttp/openobserve:
+    endpoint: http://openobserve:5080/api/default
+    headers:
+      Authorization: Basic ${ZO_INGESTION_TOKEN}
+    tls:
+      insecure: true
+
+  # Debug: disable in production
+  debug:
+    verbosity: basic
+
+service:
+  extensions:
+    - health_check
+  pipelines:
+    logs:
+      receivers:
+        - filelog/postgres
+        - filelog/nginx
+        - filelog/nginx-error
+        - otlp
+      processors:
+        - memory_limiter
+        - batch
+        - resource
+      exporters:
+        - otlphttp/openobserve
+        # - debug
+
+    metrics:
+      receivers:
+        - postgresql
+        - nginx
+        - docker_stats
+        - otlp
+      processors:
+        - memory_limiter
+        - batch
+        - resource
+      exporters:
+        - otlphttp/openobserve
+        # - debug
+
+    traces:
+      receivers:
+        - otlp
+      processors:
+        - memory_limiter
+        - batch
+        - resource
+      exporters:
+        - otlphttp/openobserve
+        # - debug
+
+  telemetry:
+    logs:
+      level: info

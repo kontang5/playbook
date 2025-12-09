@@ -1,0 +1,90 @@
+services:
+  openobserve:
+    image: public.ecr.aws/zinclabs/openobserve:latest
+    container_name: openobserve
+    environment:
+      ZO_ROOT_USER_EMAIL: ${ZO_ROOT_USER_EMAIL}
+      ZO_ROOT_USER_PASSWORD: ${ZO_ROOT_USER_PASSWORD}
+      ZO_DATA_DIR: /data
+      ZO_COMPACT_DATA_RETENTION_DAYS: 30
+    volumes:
+      - openobserve-data:/data
+    ports:
+      - "5080:5080"
+    networks:
+      - private
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "1m"
+        max-file: "1"
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    command: ["--config", "/etc/otel-collector-config.yaml"]
+    environment:
+      POSTGRES_OBSERVER_PASSWORD: ${POSTGRES_OBSERVER_PASSWORD}
+      ZO_INGESTION_TOKEN: ${ZO_INGESTION_TOKEN}
+    volumes:
+      - ./otel-collector.yaml:/etc/otel-collector-config.yaml:ro
+      - postgres-logs:/logs/postgres:ro
+      - nginx-logs:/logs/nginx:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    networks:
+      - private
+      - db
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:13133/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "1m"
+        max-file: "1"
+    restart: unless-stopped
+
+  log-cleanup:
+    image: alpine:latest
+    container_name: log-cleanup
+    volumes:
+      - postgres-logs:/logs/postgres
+      - nginx-logs:/logs/nginx
+    command: >
+      sh -c "echo '0 0 * * * find /logs -name \"*.log\" -mtime +7 -delete' | crontab - && crond -f"
+    logging:
+      driver: json-file
+      options:
+        max-size: "1m"
+        max-file: "1"
+    restart: unless-stopped
+
+networks:
+  private:
+    external: true
+    name: private-network
+  db:
+    external: true
+    name: db-network
+
+volumes:
+  openobserve-data:
+    external: true
+    name: openobserve-data
+  postgres-logs:
+    external: true
+    name: postgres-logs
+  nginx-logs:
+    external: true
+    name: nginx-logs
