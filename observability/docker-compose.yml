@@ -13,61 +13,43 @@ services:
       - "5080:5080"
     networks:
       - private
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5080/healthz"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
     logging:
       driver: json-file
       options:
-        max-size: "1m"
-        max-file: "1"
+        max-size: "10m"
+        max-file: "3"
     restart: unless-stopped
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
     container_name: otel-collector
-    command: ["--config", "/etc/otel-collector-config.yaml"]
+    user: "0:0"
+    command:
+      - "--config=/etc/otel/base.yaml"
+      - "--config=/etc/otel/application.yaml"
+      - "--config=/etc/otel/nginx.yaml"
+      - "--config=/etc/otel/database.yaml"
+      - "--config=/etc/otel/docker.yaml"
     environment:
       POSTGRES_OBSERVER_PASSWORD: ${POSTGRES_OBSERVER_PASSWORD}
       ZO_INGESTION_TOKEN: ${ZO_INGESTION_TOKEN}
     volumes:
-      - ./otel-collector.yaml:/etc/otel-collector-config.yaml:ro
-      - postgres-logs:/logs/postgres:ro
-      - nginx-logs:/logs/nginx:ro
+      - ./otel-collector:/etc/otel:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - otel-file-storage:/var/lib/otelcol/file_storage
     ports:
       - "4317:4317"
       - "4318:4318"
+      - "13133:13133"
     networks:
       - private
       - db
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:13133/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
     logging:
       driver: json-file
       options:
-        max-size: "1m"
-        max-file: "1"
-    restart: unless-stopped
-
-  log-cleanup:
-    image: alpine:latest
-    container_name: log-cleanup
-    volumes:
-      - postgres-logs:/logs/postgres
-      - nginx-logs:/logs/nginx
-    command: >
-      sh -c "echo '0 0 * * * find /logs -name \"*.log\" -mtime +7 -delete' | crontab - && crond -f"
-    logging:
-      driver: json-file
-      options:
-        max-size: "1m"
-        max-file: "1"
+        max-size: "10m"
+        max-file: "3"
     restart: unless-stopped
 
 networks:
@@ -82,9 +64,4 @@ volumes:
   openobserve-data:
     external: true
     name: openobserve-data
-  postgres-logs:
-    external: true
-    name: postgres-logs
-  nginx-logs:
-    external: true
-    name: nginx-logs
+  otel-file-storage:

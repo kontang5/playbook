@@ -1,0 +1,43 @@
+# Base configuration: extensions, common processors, exporters
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+  file_storage:
+    directory: /var/lib/otelcol/file_storage
+
+processors:
+  batch:
+    timeout: 10s
+    send_batch_size: 1000
+
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 256
+    spike_limit_mib: 64
+
+  resource:
+    attributes:
+      - key: service.namespace
+        value: playbook
+        action: upsert
+
+exporters:
+  # Default exporter (metrics, traces, fallback logs)
+  otlphttp/openobserve:
+    endpoint: http://openobserve:5080/api/default
+    headers:
+      Authorization: Basic ${ZO_INGESTION_TOKEN}
+    tls:
+      insecure: true
+
+  debug:
+    verbosity: basic
+
+service:
+  extensions:
+    - health_check
+    - file_storage
+  telemetry:
+    logs:
+      level: info

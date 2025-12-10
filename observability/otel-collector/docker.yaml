@@ -1,0 +1,163 @@
+# Docker container logs: filelog receiver, classification, and routing
+
+receivers:
+  # Docker container logs - single receiver for all containers
+  filelog/docker:
+    include:
+      - /var/lib/docker/containers/*/*.log
+    exclude:
+      - /var/lib/docker/containers/*/config.v2.json
+    include_file_path: true
+    operators:
+      # Parse Docker json-file log format
+      - type: json_parser
+        timestamp:
+          parse_from: attributes.time
+          layout: '%Y-%m-%dT%H:%M:%S.%LZ'
+      # Extract container ID from file path
+      - type: regex_parser
+        id: extract_container_id
+        parse_from: attributes["log.file.path"]
+        regex: '/var/lib/docker/containers/(?P<container_id>[a-f0-9]+)/'
+      # Move container_id to resource attribute
+      - type: move
+        from: attributes.container_id
+        to: resource["container.id"]
+      # Set log.iostream from stream
+      - type: move
+        from: attributes.stream
+        to: attributes["log.iostream"]
+      # Move log body
+      - type: move
+        from: attributes.log
+        to: body
+      # Clean up
+      - type: remove
+        field: attributes.time
+      # Parse nginx JSON logs and extract OTel semantic convention fields
+      - type: json_parser
+        id: parse_nginx_json
+        parse_from: body
+        if: 'body != nil and body matches "^\\{\"time\":.*"'
+      # Map nginx fields to OTel semantic conventions
+      - type: add
+        id: set_http_status
+        field: attributes["http.response.status_code"]
+        value: EXPR(attributes.status)
+        if: 'attributes.status != nil'
+      - type: add
+        id: set_client_address
+        field: attributes["client.address"]
+        value: EXPR(attributes.remote_addr)
+        if: 'attributes.remote_addr != nil'
+      - type: add
+        id: set_user_agent
+        field: attributes["user_agent.original"]
+        value: EXPR(attributes.http_user_agent)
+        if: 'attributes.http_user_agent != nil'
+      - type: add
+        id: set_request_duration
+        field: attributes["http.request.duration"]
+        value: EXPR(attributes.request_time)
+        if: 'attributes.request_time != nil'
+      - type: add
+        id: set_url_path
+        field: attributes["url.path"]
+        value: EXPR(attributes.request)
+        if: 'attributes.request != nil'
+      # Remove original nginx fields
+      - type: remove
+        id: remove_nginx_time
+        field: attributes.time
+        if: 'attributes.time != nil'
+      - type: remove
+        id: remove_nginx_server_name
+        field: attributes.server_name
+        if: 'attributes.server_name != nil'
+      - type: remove
+        id: remove_nginx_remote_addr
+        field: attributes.remote_addr
+        if: 'attributes.remote_addr != nil'
+      - type: remove
+        id: remove_nginx_remote_user
+        field: attributes.remote_user
+        if: 'attributes.remote_user != nil'
+      - type: remove
+        id: remove_nginx_request
+        field: attributes.request
+        if: 'attributes.request != nil'
+      - type: remove
+        id: remove_nginx_status
+        field: attributes.status
+        if: 'attributes.status != nil'
+      - type: remove
+        id: remove_nginx_body_bytes
+        field: attributes.body_bytes_sent
+        if: 'attributes.body_bytes_sent != nil'
+      - type: remove
+        id: remove_nginx_request_time
+        field: attributes.request_time
+        if: 'attributes.request_time != nil'
+      - type: remove
+        id: remove_nginx_referer
+        field: attributes.http_referer
+        if: 'attributes.http_referer != nil'
+      - type: remove
+        id: remove_nginx_user_agent
+        field: attributes.http_user_agent
+        if: 'attributes.http_user_agent != nil'
+      - type: remove
+        id: remove_nginx_xff
+        field: attributes.http_x_forwarded_for
+        if: 'attributes.http_x_forwarded_for != nil'
+    storage: file_storage
+    start_at: beginning
+
+processors:
+  # Transform: classify logs by service.name based on content patterns
+  transform/classify:
+    log_statements:
+      - context: log
+        statements:
+          # Nginx logs contain specific patterns
+          - set(resource.attributes["service.name"], "nginx") where IsMatch(body, "^\\{\"time\":.*\"request\":.*\"status\":")
+          - set(resource.attributes["service.name"], "nginx") where IsMatch(body, ".*nginx.*|.*GET /.*HTTP.*|.*POST /.*HTTP.*")
+          # PostgreSQL logs
+          - set(resource.attributes["service.name"], "postgres") where IsMatch(body, ".*LOG:.*|.*postgres.*|.*PostgreSQL.*|.*UTC \\[\\d+\\].*")
+          # OpenObserve internal logs (exclude from routing)
+          - set(resource.attributes["service.name"], "openobserve") where IsMatch(body, ".*openobserve.*|.*actix_web.*")
+          # OTel collector internal logs
+          - set(resource.attributes["service.name"], "otel-collector") where IsMatch(body, ".*otelcol.*|.*otel.*collector.*")
+
+connectors:
+  # Route logs to different pipelines based on service.name
+  routing/logs:
+    default_pipelines: [logs/other]
+    error_mode: ignore
+    table:
+      - statement: route() where resource.attributes["service.name"] == "nginx"
+        pipelines: [logs/nginx]
+      - statement: route() where resource.attributes["service.name"] == "postgres"
+        pipelines: [logs/database]
+
+service:
+  pipelines:
+    # Docker logs -> classify and route
+    logs/docker:
+      receivers:
+        - filelog/docker
+      processors:
+        - memory_limiter
+        - transform/classify
+        - batch
+      exporters:
+        - routing/logs
+
+    # Fallback for unclassified logs
+    logs/other:
+      receivers:
+        - routing/logs
+      processors:
+        - batch
+      exporters:
+        - otlphttp/openobserve

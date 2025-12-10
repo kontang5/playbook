@@ -8,20 +8,19 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./conf.d:/etc/nginx/conf.d:ro
       - ./www:/usr/share/nginx/html:ro
-      - nginx-logs:/var/log/nginx
     networks:
       - public
       - private
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/health"]
+      test: ["CMD", "nginx", "-t"]
       interval: 30s
       timeout: 10s
       retries: 3
     logging:
       driver: json-file
       options:
-        max-size: "1m"
-        max-file: "1"
+        max-size: "10m"
+        max-file: "3"
     restart: unless-stopped
 
 networks:
@@ -31,8 +30,3 @@ networks:
   private:
     external: true
     name: private-network
-
-volumes:
-  nginx-logs:
-    external: true
-    name: nginx-logs

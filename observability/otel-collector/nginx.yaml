@@ -1,0 +1,65 @@
+# Nginx telemetry: access logs (via docker/filelog) and stub_status metrics
+
+receivers:
+  # Nginx stub_status metrics
+  nginx:
+    endpoint: http://nginx:8080/stub_status
+    collection_interval: 30s
+
+processors:
+  # Resource attributes for nginx metrics
+  resource/nginx:
+    attributes:
+      - key: service.name
+        value: nginx
+        action: upsert
+      - key: server.address
+        value: nginx
+        action: upsert
+      - key: server.port
+        value: "80"
+        action: upsert
+
+  # Transform: parse and clean nginx logs (JSON format)
+  transform/nginx:
+    log_statements:
+      - context: log
+        statements:
+          - set(severity_text, "INFO")
+          - delete_key(attributes, "log.file.name")
+          - delete_key(attributes, "log.file.path")
+          - delete_key(attributes, "log.iostream")
+          - delete_key(resource.attributes, "container.id")
+
+exporters:
+  otlphttp/nginx:
+    endpoint: http://openobserve:5080/api/default
+    headers:
+      Authorization: Basic ${ZO_INGESTION_TOKEN}
+      stream-name: nginx
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    # Nginx logs (routed from docker.yaml connector)
+    logs/nginx:
+      receivers:
+        - routing/logs
+      processors:
+        - transform/nginx
+        - batch
+      exporters:
+        - otlphttp/nginx
+
+    # Nginx metrics (stub_status)
+    metrics/nginx:
+      receivers:
+        - nginx
+      processors:
+        - memory_limiter
+        - resource/nginx
+        - batch
+        - resource
+      exporters:
+        - otlphttp/openobserve

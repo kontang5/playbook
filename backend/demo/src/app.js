@@ -20,11 +20,14 @@ class OTelTransport extends winston.Transport {
       debug: SeverityNumber.DEBUG,
     };
 
+    // Extract only the attributes we want (exclude level, message, timestamp which are handled separately)
+    const { level, message, timestamp, ...attributes } = info;
+
     otelLogger.emit({
-      severityNumber: severityMap[info.level] || SeverityNumber.INFO,
-      severityText: info.level.toUpperCase(),
-      body: info.message,
-      attributes: { ...info, level: undefined, message: undefined },
+      severityNumber: severityMap[level] || SeverityNumber.INFO,
+      severityText: level.toUpperCase(),
+      body: message,
+      attributes,
     });
 
     callback();
@@ -57,13 +60,14 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD,
 });
 
-// OTEL metrics
+// OTEL metrics with semantic convention names
 const meter = metrics.getMeter('backend');
-const requestCounter = meter.createCounter('http_requests_total', {
-  description: 'Total HTTP requests',
+const requestCounter = meter.createCounter('http.server.request.total', {
+  description: 'Total HTTP server requests',
 });
-const requestDuration = meter.createHistogram('http_request_duration_ms', {
-  description: 'HTTP request duration in milliseconds',
+const requestDuration = meter.createHistogram('http.server.request.duration', {
+  description: 'HTTP server request duration in seconds',
+  unit: 's',
 });
 
 // Middleware: request logging and metrics
@@ -71,10 +75,23 @@ app.use((req, res, next) => {
   const start = Date.now();
 
   res.on('finish', () => {
-    const duration = Date.now() - start;
-    requestCounter.add(1, { method: req.method, path: req.path, status: res.statusCode });
-    requestDuration.record(duration, { method: req.method, path: req.path });
-    logger.info('request', { method: req.method, path: req.path, status: res.statusCode, duration });
+    const durationMs = Date.now() - start;
+    const durationSec = durationMs / 1000;
+    // OTel semantic convention attributes
+    const attrs = {
+      'http.request.method': req.method,
+      'http.response.status_code': res.statusCode,
+      'url.path': req.path,
+      'url.scheme': 'http',
+    };
+    requestCounter.add(1, attrs);
+    requestDuration.record(durationSec, attrs);
+    logger.info('request', {
+      'http.request.method': req.method,
+      'url.path': req.path,
+      'http.response.status_code': res.statusCode,
+      'http.request.duration': durationMs
+    });
   });
 
   next();

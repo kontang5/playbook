@@ -8,8 +8,6 @@ docker network create public-network 2>/dev/null || true
 docker network create private-network 2>/dev/null || true
 docker network create db-network 2>/dev/null || true
 docker volume create postgres-data 2>/dev/null || true
-docker volume create postgres-logs 2>/dev/null || true
-docker volume create nginx-logs 2>/dev/null || true
 docker volume create openobserve-data 2>/dev/null || true
 
 echo ""
