@@ -1,0 +1,104 @@
+# PostgreSQL telemetry: logs (via docker/filelog) and database metrics
+
+receivers:
+  # PostgreSQL metrics
+  postgresql:
+    endpoint: postgres:5432
+    username: observer
+    password: ${POSTGRES_OBSERVER_PASSWORD}
+    databases:
+      - postgres
+      - demo
+    collection_interval: 30s
+    tls:
+      insecure: true
+
+processors:
+  # Resource attributes for postgresql metrics
+  resource/postgresql:
+    attributes:
+      - key: service.name
+        value: postgresql
+        action: upsert
+      - key: server.address
+        value: postgres
+        action: upsert
+      - key: server.port
+        value: "5432"
+        action: upsert
+      - key: db.system.name
+        value: postgresql
+        action: upsert
+
+  # Transform: rename postgresql metric attributes to OTel conventions
+  transform/metrics_postgres:
+    metric_statements:
+      - context: datapoint
+        statements:
+          - set(attributes["db.namespace"], attributes["postgresql_database_name"]) where attributes["postgresql_database_name"] != nil
+          - delete_key(attributes, "postgresql_database_name")
+
+  # Transform: parse and clean PostgreSQL logs
+  transform/postgres:
+    log_statements:
+      - context: log
+        statements:
+          # Set db.system.name per OTel semantic convention
+          - set(attributes["db.system.name"], "postgresql")
+          # Set default values for db.user and db.namespace
+          - set(attributes["db.user"], "system")
+          - set(attributes["db.namespace"], "system")
+          # Extract severity from PostgreSQL log format
+          - set(severity_text, "INFO") where IsMatch(body, ".*LOG:.*")
+          - set(severity_text, "ERROR") where IsMatch(body, ".*ERROR:.*")
+          - set(severity_text, "WARNING") where IsMatch(body, ".*WARNING:.*")
+          - set(severity_text, "FATAL") where IsMatch(body, ".*FATAL:.*")
+          - set(severity_text, "PANIC") where IsMatch(body, ".*PANIC:.*")
+          - set(severity_text, "DEBUG") where IsMatch(body, ".*DEBUG:.*")
+          - set(severity_text, "NOTICE") where IsMatch(body, ".*NOTICE:.*")
+          # Extract db.user from connection logs (overrides default)
+          - set(attributes["db.user"], "observer") where IsMatch(body, ".*user=observer.*")
+          - set(attributes["db.user"], "demo_app") where IsMatch(body, ".*user=demo_app.*")
+          - set(attributes["db.user"], "postgres") where IsMatch(body, ".*user=postgres.*")
+          # Extract db.namespace from connection logs (overrides default)
+          - set(attributes["db.namespace"], "demo") where IsMatch(body, ".*database=demo.*")
+          - set(attributes["db.namespace"], "postgres") where IsMatch(body, ".*database=postgres.*")
+          # Remove unnecessary attributes
+          - delete_key(attributes, "log.file.name")
+          - delete_key(attributes, "log.file.path")
+          - delete_key(attributes, "log.iostream")
+          - delete_key(resource.attributes, "container.id")
+
+exporters:
+  otlphttp/database:
+    endpoint: http://openobserve:5080/api/default
+    headers:
+      Authorization: Basic ${ZO_INGESTION_TOKEN}
+      stream-name: database
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    # Database logs (routed from docker.yaml connector)
+    logs/database:
+      receivers:
+        - routing/logs
+      processors:
+        - transform/postgres
+        - batch
+      exporters:
+        - otlphttp/database
+
+    # PostgreSQL metrics
+    metrics/postgresql:
+      receivers:
+        - postgresql
+      processors:
+        - memory_limiter
+        - resource/postgresql
+        - transform/metrics_postgres
+        - batch
+        - resource
+      exporters:
+        - otlphttp/openobserve

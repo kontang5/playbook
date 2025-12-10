@@ -13,11 +13,6 @@ services:
       - "5080:5080"
     networks:
       - private
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5080/healthz"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
     logging:
       driver: json-file
       options:
@@ -28,24 +23,28 @@ services:
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
     container_name: otel-collector
-    command: ["--config", "/etc/otel-collector-config.yaml"]
+    user: "0:0"
+    command:
+      - "--config=/etc/otel/base.yaml"
+      - "--config=/etc/otel/application.yaml"
+      - "--config=/etc/otel/nginx.yaml"
+      - "--config=/etc/otel/database.yaml"
+      - "--config=/etc/otel/docker.yaml"
     environment:
       POSTGRES_OBSERVER_PASSWORD: ${POSTGRES_OBSERVER_PASSWORD}
       ZO_INGESTION_TOKEN: ${ZO_INGESTION_TOKEN}
     volumes:
-      - ./otel-collector.yaml:/etc/otel-collector-config.yaml:ro
+      - ./otel-collector:/etc/otel:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - otel-file-storage:/var/lib/otelcol/file_storage
     ports:
       - "4317:4317"
       - "4318:4318"
+      - "13133:13133"
     networks:
       - private
       - db
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:13133/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
     logging:
       driver: json-file
       options:
@@ -65,3 +64,4 @@ volumes:
   openobserve-data:
     external: true
     name: openobserve-data
+  otel-file-storage:
