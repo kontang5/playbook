@@ -1,37 +1,9 @@
 receivers:
-  # Logs from PostgreSQL files (JSON format)
-  filelog/postgres:
-    include:
-      - /logs/postgres/*.log
-    start_at: end
-    operators:
-      - type: json_parser
-        timestamp:
-          parse_from: attributes.timestamp
-          layout: "%Y-%m-%d %H:%M:%S.%f %Z"
-    attributes:
-      source: postgresql
-
-  # Logs from Nginx access log (JSON format)
-  filelog/nginx:
-    include:
-      - /logs/nginx/access.log
-    start_at: end
-    operators:
-      - type: json_parser
-        timestamp:
-          parse_from: attributes.time
-          layout: "%Y-%m-%dT%H:%M:%S%z"
-    attributes:
-      source: nginx-access
-
-  # Logs from Nginx error log (plain text)
-  filelog/nginx-error:
-    include:
-      - /logs/nginx/error.log
-    start_at: end
-    attributes:
-      source: nginx-error
+  # Container logs from Docker json-file driver
+  docker_logs:
+    # Collect logs from all containers
+    # Filters by container name to target specific services
+    exclude_containers: []
 
   # OTLP from backend API (logs, metrics, traces)
   otlp:
@@ -56,11 +28,6 @@ receivers:
   # Nginx metrics (stub_status)
   nginx:
     endpoint: http://nginx:8080/stub_status
-    collection_interval: 30s
-
-  # Container metrics
-  docker_stats:
-    endpoint: unix:///var/run/docker.sock
     collection_interval: 30s
 
 extensions:
@@ -101,9 +68,7 @@ service:
   pipelines:
     logs:
       receivers:
-        - filelog/postgres
-        - filelog/nginx
-        - filelog/nginx-error
+        - docker_logs
         - otlp
       processors:
         - memory_limiter
@@ -117,7 +82,6 @@ service:
       receivers:
         - postgresql
         - nginx
-        - docker_stats
         - otlp
       processors:
         - memory_limiter

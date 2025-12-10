@@ -21,8 +21,8 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "1m"
-        max-file: "1"
+        max-size: "10m"
+        max-file: "3"
     restart: unless-stopped
 
   otel-collector:
@@ -34,8 +34,6 @@ services:
       ZO_INGESTION_TOKEN: ${ZO_INGESTION_TOKEN}
     volumes:
       - ./otel-collector.yaml:/etc/otel-collector-config.yaml:ro
-      - postgres-logs:/logs/postgres:ro
-      - nginx-logs:/logs/nginx:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:
       - "4317:4317"
@@ -51,23 +49,8 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "1m"
-        max-file: "1"
-    restart: unless-stopped
-
-  log-cleanup:
-    image: alpine:latest
-    container_name: log-cleanup
-    volumes:
-      - postgres-logs:/logs/postgres
-      - nginx-logs:/logs/nginx
-    command: >
-      sh -c "echo '0 0 * * * find /logs -name \"*.log\" -mtime +7 -delete' | crontab - && crond -f"
-    logging:
-      driver: json-file
-      options:
-        max-size: "1m"
-        max-file: "1"
+        max-size: "10m"
+        max-file: "3"
     restart: unless-stopped
 
 networks:
@@ -82,9 +65,3 @@ volumes:
   openobserve-data:
     external: true
     name: openobserve-data
-  postgres-logs:
-    external: true
-    name: postgres-logs
-  nginx-logs:
-    external: true
-    name: nginx-logs
