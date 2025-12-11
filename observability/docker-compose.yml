@@ -26,10 +26,11 @@ services:
     user: "0:0"
     command:
       - "--config=/etc/otel/base.yaml"
+      - "--config=/etc/otel/docker.yaml"
+      - "--config=/etc/otel/routing.yaml"
       - "--config=/etc/otel/application.yaml"
       - "--config=/etc/otel/nginx.yaml"
       - "--config=/etc/otel/database.yaml"
-      - "--config=/etc/otel/docker.yaml"
     environment:
       POSTGRES_OBSERVER_PASSWORD: ${POSTGRES_OBSERVER_PASSWORD}
       ZO_INGESTION_TOKEN: ${ZO_INGESTION_TOKEN}

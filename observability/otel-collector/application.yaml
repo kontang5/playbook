@@ -1,4 +1,4 @@
-# Application telemetry: backend API logs, metrics, traces via OTLP
+# Application: logs, metrics, and traces via OTLP
 
 receivers:
   otlp:
@@ -9,15 +9,8 @@ receivers:
         endpoint: 0.0.0.0:4318
 
 processors:
-  # Filter: drop auto-instrumentation duration metrics (keep custom ones)
-  filter/metrics_drop:
-    metrics:
-      metric:
-        - 'name == "http.client.duration"'
-        - 'name == "http.server.duration"'
-
-  # Transform: remove noisy resource attributes from metrics
-  transform/metrics_cleanup:
+  # Remove noisy resource attributes
+  transform/cleanup:
     metric_statements:
       - context: resource
         statements:
@@ -33,9 +26,6 @@ processors:
           - delete_key(attributes, "telemetry.sdk.language")
           - delete_key(attributes, "telemetry.sdk.name")
           - delete_key(attributes, "telemetry.sdk.version")
-
-  # Transform: remove noisy resource attributes from traces
-  transform/traces_cleanup:
     trace_statements:
       - context: resource
         statements:
@@ -63,38 +53,15 @@ exporters:
 
 service:
   pipelines:
-    # Application logs (via OTLP SDK)
     logs/application:
-      receivers:
-        - otlp
-      processors:
-        - memory_limiter
-        - batch
-        - resource
-      exporters:
-        - otlphttp/application
-
-    # Application metrics (via OTLP SDK)
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resource]
+      exporters: [otlphttp/application]
     metrics/application:
-      receivers:
-        - otlp
-      processors:
-        - memory_limiter
-        - filter/metrics_drop
-        - transform/metrics_cleanup
-        - batch
-        - resource
-      exporters:
-        - otlphttp/openobserve
-
-    # Application traces
+      receivers: [otlp]
+      processors: [memory_limiter, transform/cleanup, batch, resource]
+      exporters: [otlphttp/openobserve]
     traces:
-      receivers:
-        - otlp
-      processors:
-        - memory_limiter
-        - transform/traces_cleanup
-        - batch
-        - resource
-      exporters:
-        - otlphttp/openobserve
+      receivers: [otlp]
+      processors: [memory_limiter, transform/cleanup, batch, resource]
+      exporters: [otlphttp/openobserve]

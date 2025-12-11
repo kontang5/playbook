@@ -1,13 +1,11 @@
-# Nginx telemetry: access logs (via docker/filelog) and stub_status metrics
+# Nginx: access logs and stub_status metrics
 
 receivers:
-  # Nginx stub_status metrics
   nginx:
     endpoint: http://nginx:8080/stub_status
     collection_interval: 30s
 
 processors:
-  # Resource attributes for nginx metrics
   resource/nginx:
     attributes:
       - key: service.name
@@ -20,12 +18,48 @@ processors:
         value: "80"
         action: upsert
 
-  # Transform: parse and clean nginx logs (JSON format)
+  # Parse and transform nginx logs
   transform/nginx:
     log_statements:
+      # JSON access logs
+      - context: log
+        conditions:
+          - IsMatch(body, "^\\{.*")
+        statements:
+          - merge_maps(attributes, ParseJSON(body), "upsert")
+          # Map to OTel semantic conventions
+          - set(attributes["http.response.status_code"], attributes["status"])
+          - set(attributes["client.address"], attributes["remote_addr"])
+          - set(attributes["user_agent.original"], attributes["http_user_agent"])
+          - set(attributes["http.request.duration"], attributes["request_time"])
+          - set(attributes["url.path"], attributes["request"])
+          # Set severity based on HTTP status (default INFO)
+          - set(severity_text, "INFO")
+          - set(severity_text, "WARN") where Int(attributes["status"]) >= 400 and Int(attributes["status"]) < 500
+          - set(severity_text, "ERROR") where Int(attributes["status"]) >= 500
+          # Clear body (data now in attributes)
+          - set(body, "")
+          # Delete original nginx fields
+          - delete_key(attributes, "time")
+          - delete_key(attributes, "server_name")
+          - delete_key(attributes, "remote_addr")
+          - delete_key(attributes, "remote_user")
+          - delete_key(attributes, "request")
+          - delete_key(attributes, "status")
+          - delete_key(attributes, "body_bytes_sent")
+          - delete_key(attributes, "request_time")
+          - delete_key(attributes, "http_referer")
+          - delete_key(attributes, "http_user_agent")
+          - delete_key(attributes, "http_x_forwarded_for")
+      # Error logs (non-JSON)
+      - context: log
+        conditions:
+          - not IsMatch(body, "^\\{.*")
+        statements:
+          - set(severity_text, "ERROR")
+      # Cleanup docker attributes (all logs)
       - context: log
         statements:
-          - set(severity_text, "INFO")
           - delete_key(attributes, "log.file.name")
           - delete_key(attributes, "log.file.path")
           - delete_key(attributes, "log.iostream")
@@ -42,24 +76,11 @@ exporters:
 
 service:
   pipelines:
-    # Nginx logs (routed from docker.yaml connector)
     logs/nginx:
-      receivers:
-        - routing/logs
-      processors:
-        - transform/nginx
-        - batch
-      exporters:
-        - otlphttp/nginx
-
-    # Nginx metrics (stub_status)
+      receivers: [routing/logs]
+      processors: [transform/nginx, batch]
+      exporters: [otlphttp/nginx]
     metrics/nginx:
-      receivers:
-        - nginx
-      processors:
-        - memory_limiter
-        - resource/nginx
-        - batch
-        - resource
-      exporters:
-        - otlphttp/openobserve
+      receivers: [nginx]
+      processors: [memory_limiter, resource/nginx, batch, resource]
+      exporters: [otlphttp/openobserve]
