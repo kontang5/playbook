@@ -1,52 +1,9 @@
 // Load telemetry first
-const { loggerProvider } = require('./telemetry');
+const { logger, trackRequest } = require('./telemetry/index');
 
 const express = require('express');
 const { Pool } = require('pg');
 const { trace, metrics, SpanStatusCode } = require('@opentelemetry/api');
-const { logs, SeverityNumber } = require('@opentelemetry/api-logs');
-const winston = require('winston');
-
-// OTEL logger for sending logs to collector
-const otelLogger = loggerProvider.getLogger('backend');
-
-// Winston transport that sends logs to OTEL
-class OTelTransport extends winston.Transport {
-  log(info, callback) {
-    const severityMap = {
-      error: SeverityNumber.ERROR,
-      warn: SeverityNumber.WARN,
-      info: SeverityNumber.INFO,
-      debug: SeverityNumber.DEBUG,
-    };
-
-    // Extract only the attributes we want (exclude level, message, timestamp which are handled separately)
-    const { level, message, timestamp, ...attributes } = info;
-
-    otelLogger.emit({
-      severityNumber: severityMap[level] || SeverityNumber.INFO,
-      severityText: level.toUpperCase(),
-      body: message,
-      attributes,
-    });
-
-    callback();
-  }
-}
-
-// Logger setup
-const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
-  defaultMeta: { service: 'backend' },
-  transports: [
-    new winston.transports.Console(),
-    new OTelTransport(),
-  ],
-});
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -60,14 +17,10 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD,
 });
 
-// OTEL metrics with semantic convention names
+// OTEL metrics - counter only (avg duration via observable gauge in metrics.js)
 const meter = metrics.getMeter('backend');
 const requestCounter = meter.createCounter('http.server.request.total', {
   description: 'Total HTTP server requests',
-});
-const requestDuration = meter.createHistogram('http.server.request.duration', {
-  description: 'HTTP server request duration in seconds',
-  unit: 's',
 });
 
 // Middleware: request logging and metrics
@@ -77,20 +30,18 @@ app.use((req, res, next) => {
   res.on('finish', () => {
     const durationMs = Date.now() - start;
     const durationSec = durationMs / 1000;
-    // OTel semantic convention attributes
     const attrs = {
       'http.request.method': req.method,
       'http.response.status_code': res.statusCode,
       'url.path': req.path,
-      'url.scheme': 'http',
     };
     requestCounter.add(1, attrs);
-    requestDuration.record(durationSec, attrs);
+    trackRequest(durationSec);
     logger.info('request', {
       'http.request.method': req.method,
       'url.path': req.path,
       'http.response.status_code': res.statusCode,
-      'http.request.duration': durationMs
+      'http.request.duration': durationMs,
     });
   });
 
