@@ -5,85 +5,88 @@
 Centralized observability using OpenTelemetry Collector and OpenObserve.
 
 ```
-┌──────────────┐  JSON logs    ┌─────────────────┐
-│  PostgreSQL  │──────────────→│  postgres-logs  │──┐
-└──────────────┘               └─────────────────┘  │
-                                                    │  filelog receiver
-┌──────────────┐  JSON logs    ┌─────────────────┐  │
-│    Nginx     │──────────────→│   nginx-logs    │──┼──→┌────────────────┐    OTLP    ┌─────────────┐
-└──────────────┘               └─────────────────┘  │   │                │───────────→│             │
-                                                    │   │ OTel Collector │            │ OpenObserve │
-┌──────────────┐  OTLP direct                       │   │                │───────────→│  (30 days)  │
-│   Demo API   │────────────────────────────────────┴──→│                │            │             │
-└──────────────┘  logs + metrics + traces               └────────────────┘            └─────────────┘
-                                                               ▲
-┌──────────────┐  docker_stats                                 │
-│   Containers │───────────────────────────────────────────────┘
+┌──────────────┐
+│  PostgreSQL  │──┐
+└──────────────┘  │
+                  │  Docker logs
+┌──────────────┐  │  (filelog receiver)
+│    Nginx     │──┼──→┌────────────────┐    OTLP    ┌─────────────┐
+└──────────────┘  │   │                │───────────→│             │
+                  │   │ OTel Collector │            │ OpenObserve │
+┌──────────────┐  │   │                │───────────→│  (30 days)  │
+│   Demo API   │──┴──→│                │            │             │
+└──────────────┘      └────────────────┘            └─────────────┘
+  OTLP direct               ▲
+  (logs+metrics+traces)     │  docker_stats
+                            │
+┌──────────────┐            │
+│   Containers │────────────┘
 └──────────────┘
-
-┌─────────────────────────────────────────────────┐
-│  log-cleanup (cron: delete >7 days from volumes)│
-└─────────────────────────────────────────────────┘
 ```
 
 ## Components
 
-| Component | Purpose | Port |
-|-----------|---------|------|
-| OpenObserve | Storage & UI for logs/metrics/traces | 5080 |
-| OTel Collector | Collect and forward telemetry | 4317 (gRPC), 4318 (HTTP) |
-| log-cleanup | Rotate local log files (7 days) | - |
+| Component      | Purpose                              | Port                     |
+|----------------|--------------------------------------|--------------------------|
+| OpenObserve    | Storage & UI for logs/metrics/traces | 5080                     |
+| OTel Collector | Collect and forward telemetry        | 4317 (gRPC), 4318 (HTTP) |
 
 ## Data Sources
 
 ### Logs
 
-| Source | Method | Format |
-|--------|--------|--------|
-| PostgreSQL | File-based → filelog receiver | JSON |
-| Nginx | File-based → filelog receiver | JSON |
-| Demo API | Direct OTLP from SDK | OTLP |
+| Source     | Method                         | Format |
+|------------|--------------------------------|--------|
+| PostgreSQL | Docker logs → filelog receiver | JSON   |
+| Nginx      | Docker logs → filelog receiver | JSON   |
+| Demo API   | Direct OTLP from SDK           | OTLP   |
 
 ### Metrics
 
-| Source | Method | Receiver |
-|--------|--------|----------|
-| PostgreSQL | Direct connection | `postgresql` receiver |
-| Nginx | stub_status endpoint (internal :8080) | `nginx` receiver |
-| Demo API | Direct OTLP from SDK | `otlp` receiver |
-| Containers | Docker socket | `docker_stats` receiver |
+| Source     | Method                                | Receiver                |
+|------------|---------------------------------------|-------------------------|
+| PostgreSQL | Direct connection                     | `postgresql` receiver   |
+| Nginx      | stub_status endpoint (internal :8080) | `nginx` receiver        |
+| Demo API   | Direct OTLP from SDK                  | `otlp` receiver         |
+| Containers | Docker socket                         | `docker_stats` receiver |
 
 ### Traces
 
-| Source | Method |
-|--------|--------|
-| Demo API | OTLP from API-logs |
+| Source   | Method               |
+|----------|----------------------|
+| Demo API | OTLP direct from SDK |
 
 ## Retention Policy
 
-| Location | Retention | Method |
-|----------|-----------|--------|
-| Local log files | 7 days | log-cleanup cron container |
-| OpenObserve | 30 days | `ZO_COMPACT_DATA_RETENTION_DAYS` |
+| Location    | Retention      | Method                           |
+|-------------|----------------|----------------------------------|
+| Docker logs | 30MB/container | Docker log rotation              |
+| OpenObserve | 30 days        | `ZO_COMPACT_DATA_RETENTION_DAYS` |
 
 ## Configuration Files
 
 ```
 observability/
-├── docker-compose.yml      # OpenObserve + OTel Collector + log-cleanup
-├── otel-collector.yaml     # Collector receivers, processors, exporters
-└── .env.example            # OpenObserve credentials + ingestion token
+├── docker-compose.yml      # OpenObserve + OTel Collector
+├── .env.example            # OpenObserve credentials + ingestion token
+└── otel-collector/         # Modular collector configs
+    ├── base.yaml           # Extensions, processors, exporters
+    ├── application.yaml    # App telemetry pipelines
+    ├── nginx.yaml          # Nginx metrics/logs
+    ├── database.yaml       # PostgreSQL metrics/logs
+    └── docker.yaml         # Docker log parsing
 ```
 
 ## Authentication
 
-OTel Collector uses an **ingestion token** to authenticate with OpenObserve. This is more secure than using root credentials.
+OTel Collector uses an **ingestion token** to authenticate with OpenObserve. This is more secure than using root
+credentials.
 
 ### Setup Steps
 
 1. Start OpenObserve: `docker compose up -d openobserve`
 2. Login to UI at `http://localhost:5080` with root credentials
-3. Go to **Ingestion** → **Data sources**
+3. Go to *Ingestion* → *Data sources*
 4. Copy the ingestion token (already base64 encoded)
 5. Add to `.env`: `ZO_INGESTION_TOKEN=<copied-token>`
 6. Start the collector: `docker compose up -d otel-collector`
@@ -92,13 +95,9 @@ OTel Collector uses an **ingestion token** to authenticate with OpenObserve. Thi
 
 ```yaml
 receivers:
-  # Logs from files
-  filelog/postgres:
-    include: [/logs/postgres/*.log]
-  filelog/nginx:
-    include: [/logs/nginx/access.log]
-  filelog/nginx-error:
-    include: [/logs/nginx/error.log]
+  # Logs from Docker container logs
+  filelog/docker:
+    include: [/var/lib/docker/containers/*/*.log]
 
   # Direct from API
   otlp:

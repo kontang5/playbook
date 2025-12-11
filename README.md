@@ -6,7 +6,7 @@ Container-based infrastructure playbook for macOS development.
 
 ```
 ┌─────────────┐      ┌─────────────┐      ┌─────────────┐
-│   Nginx     │─────→│   Backend   │─────→│ PostgreSQL  │
+│   Nginx     │─────→│   Express   │─────→│ PostgreSQL  │
 │   :80       │      │   :3000     │      │   :5432     │
 └─────────────┘      └─────────────┘      └─────────────┘
        │                    │                    │
@@ -26,13 +26,13 @@ Container-based infrastructure playbook for macOS development.
 
 ## Components
 
-| Component | Port | Description |
-|-----------|------|-------------|
-| Nginx | 80 | Reverse proxy, static files |
-| Backend | 3000 | Node.js demo API |
-| PostgreSQL | 5432 | Database (v18) |
-| OTel Collector | 4317, 4318 | Telemetry collection |
-| OpenObserve | 5080 | Observability UI |
+| Component      | Port       | Description                 |
+|----------------|------------|-----------------------------|
+| Nginx          | 80         | Reverse proxy, static files |
+| Express        | 3000       | Node.js demo API            |
+| PostgreSQL     | 5432       | Database (v18)              |
+| OTel Collector | 4317, 4318 | Telemetry collection        |
+| OpenObserve    | 5080       | Observability UI            |
 
 ## Quick Start
 
@@ -40,7 +40,7 @@ Container-based infrastructure playbook for macOS development.
 # 1. Copy environment files
 cp .env.example .env
 cp database/.env.example database/.env
-cp backend/demo/.env.example backend/demo/.env
+cp application/demo/.env.example application/demo/.env
 cp observability/.env.example observability/.env
 
 # 2. Edit .env files with your credentials
@@ -73,13 +73,13 @@ playbook/
 │       ├── postgresql.conf  # JSON logging, file-based
 │       └── init/init.sh     # Creates demo db + users
 │
-├── backend/demo/
+├── application/demo/
 │   ├── docker-compose.yml
 │   ├── Dockerfile
 │   ├── .env.example
 │   └── src/
 │       ├── app.js           # Express API
-│       └── instrumentation.js # OTel SDK
+│       └── telemetry.js     # OTel SDK
 │
 ├── nginx/
 │   ├── docker-compose.yml
@@ -90,18 +90,23 @@ playbook/
 │   └── www/                 # Static files
 │
 └── observability/
-    ├── docker-compose.yml   # OpenObserve + OTel + log-cleanup
-    ├── otel-collector.yaml  # Collector config
+    ├── docker-compose.yml   # OpenObserve + OTel Collector
     ├── .env.example
-    └── observability.md     # Architecture details
+    ├── observability.md     # Architecture details
+    └── otel-collector/      # Modular collector configs
+        ├── base.yaml        # Extensions, processors, exporters
+        ├── application.yaml # App telemetry pipelines
+        ├── nginx.yaml       # Nginx metrics/logs
+        ├── database.yaml    # PostgreSQL metrics/logs
+        └── docker.yaml      # Docker log parsing
 ```
 
 ## Database
 
-| Role | Purpose |
-|------|---------|
-| `postgres` | Superuser (admin only) |
-| `observer` | Monitoring (pg_monitor) |
+| Role       | Purpose                      |
+|------------|------------------------------|
+| `postgres` | Superuser (admin only)       |
+| `observer` | Monitoring (pg_monitor)      |
 | `demo_app` | App user for `demo` database |
 
 ## Observability
@@ -110,50 +115,41 @@ See [observability/observability.md](observability/observability.md) for details
 
 ### Data Flow
 
-| Signal | Source | Method |
-|--------|--------|--------|
-| Logs | PostgreSQL | File → OTel filelog |
-| Logs | Nginx | File → OTel filelog |
-| Logs | Backend | OTLP direct |
-| Metrics | Backend | OTLP direct |
-| Traces | Backend | OTLP direct |
-| Metrics | PostgreSQL/Nginx/Docker | OTel receivers (optional) |
+| Signal  | Source           | Method              |
+|---------|------------------|---------------------|
+| Logs    | PostgreSQL       | File → OTel filelog |
+| Logs    | Nginx            | File → OTel filelog |
+| Logs    | application      | OTLP direct         |
+| Metrics | application      | OTLP direct         |
+| Traces  | application      | OTLP direct         |
+| Metrics | PostgreSQL/Nginx | OTel receivers      |
 
 ### Retention
 
-| Location | Retention |
-|----------|-----------|
-| Local log files | 7 days |
-| OpenObserve | 30 days |
+| Location        | Retention |
+|-----------------|-----------|
+| Local log files | 7 days    |
+| OpenObserve     | 30 days   |
 
 ## Networks
 
-| Network | Services |
-|---------|----------|
-| public-network | Nginx |
-| private-network | Nginx, Backend, OTel, OpenObserve |
-| db-network | Backend, PostgreSQL, OTel |
+| Network         | Services                              |
+|-----------------|---------------------------------------|
+| public-network  | Nginx                                 |
+| private-network | Nginx, Application, OTel, OpenObserve |
+| db-network      | Application, PostgreSQL, OTel         |
 
 ## Volumes
 
-| Volume | Purpose |
-|--------|---------|
-| postgres-data | Database data |
-| postgres-logs | PostgreSQL logs |
-| nginx-logs | Nginx logs |
+| Volume           | Purpose            |
+|------------------|--------------------|
+| postgres-data    | Database data      |
+| postgres-logs    | PostgreSQL logs    |
+| nginx-logs       | Nginx logs         |
 | openobserve-data | Observability data |
 
-## Session Notes
+## DIY
 
-### Completed
-- [x] Git-push security (.gitignore, .env.example pattern)
-- [x] Database: PostgreSQL 18, JSON logging, demo_app user
-- [x] Nginx: JSON access logs, reverse proxy
-- [x] Backend: OTel instrumentation, winston logging
-- [x] Observability: OpenObserve + OTel Collector + log-cleanup
-
-### TODO (next session)
 - [ ] Test full stack
 - [ ] Review metrics volume, filter if needed
-- [ ] Add PostgreSQL/Nginx/Docker metrics scrapers if needed
 - [ ] Production hardening (API tokens, SSL, etc.)
