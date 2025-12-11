@@ -31,6 +31,10 @@ const sdk = new NodeSDK({
       '@opentelemetry/instrumentation-net': { enabled: false },
       // Disable runtime metrics (v8js_*, nodejs_eventloop_*)
       '@opentelemetry/instrumentation-runtime-node': { enabled: false },
+      // Drop Express middleware spans (expressInit, query, etc.)
+      '@opentelemetry/instrumentation-express': {
+        ignoreLayersType: ['middleware'],
+      },
     }),
   ],
 });
