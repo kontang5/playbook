@@ -16,12 +16,8 @@ Centralized observability using OpenTelemetry Collector and OpenObserve.
 ┌──────────────┐  │   │                │───────────→│  (30 days)  │
 │   Demo API   │──┴──→│                │            │             │
 └──────────────┘      └────────────────┘            └─────────────┘
-  OTLP direct               ▲
-  (logs+metrics+traces)     │  docker_stats
-                            │
-┌──────────────┐            │
-│   Containers │────────────┘
-└──────────────┘
+  OTLP direct
+  (logs+metrics+traces)
 ```
 
 ## Components
@@ -43,12 +39,11 @@ Centralized observability using OpenTelemetry Collector and OpenObserve.
 
 ### Metrics
 
-| Source     | Method                                | Receiver                |
-|------------|---------------------------------------|-------------------------|
-| PostgreSQL | Direct connection                     | `postgresql` receiver   |
-| Nginx      | stub_status endpoint (internal :8080) | `nginx` receiver        |
-| Demo API   | Direct OTLP from SDK                  | `otlp` receiver         |
-| Containers | Docker socket                         | `docker_stats` receiver |
+| Source     | Method                                | Receiver              |
+|------------|---------------------------------------|-----------------------|
+| PostgreSQL | Direct connection                     | `postgresql` receiver |
+| Nginx      | stub_status endpoint (internal :8080) | `nginx` receiver      |
+| Demo API   | Direct OTLP from SDK                  | `otlp` receiver       |
 
 ### Traces
 
@@ -70,11 +65,12 @@ observability/
 ├── docker-compose.yml      # OpenObserve + OTel Collector
 ├── .env.example            # OpenObserve credentials + ingestion token
 └── otel-collector/         # Modular collector configs
-    ├── base.yaml           # Extensions, processors, exporters
-    ├── application.yaml    # App telemetry pipelines
+    ├── base.yaml           # Extensions, common processors, exporters
+    ├── docker.yaml         # Docker log collection (filelog receiver)
+    ├── routing.yaml        # Log classification, filtering, routing
+    ├── application.yaml    # App telemetry pipelines (OTLP receiver)
     ├── nginx.yaml          # Nginx metrics/logs
-    ├── database.yaml       # PostgreSQL metrics/logs
-    └── docker.yaml         # Docker log parsing
+    └── database.yaml       # PostgreSQL metrics/logs
 ```
 
 ## Authentication
@@ -99,19 +95,15 @@ receivers:
   filelog/docker:
     include: [/var/lib/docker/containers/*/*.log]
 
-  # Direct from API
+  # Direct from application
   otlp:
     protocols:
-      grpc:
-      http:
+      grpc:   # 4317
+      http:   # 4318
 
   # Metrics
   postgresql:
     endpoint: postgres:5432
-    username: observer
-    password: ${POSTGRES_OBSERVER_PASSWORD}
   nginx:
     endpoint: http://nginx:8080/stub_status
-  docker_stats:
-    endpoint: unix:///var/run/docker.sock
 ```
