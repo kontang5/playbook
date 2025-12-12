@@ -37,8 +37,9 @@ processors:
           - set(severity_text, "INFO")
           - set(severity_text, "WARN") where Int(attributes["status"]) >= 400 and Int(attributes["status"]) < 500
           - set(severity_text, "ERROR") where Int(attributes["status"]) >= 500
-          # Clear body (data now in attributes)
-          - set(body, "")
+          # Mark as processed and set body
+          - set(attributes["_processed"], true)
+          - set(body, "Access log")
           # Delete original nginx fields
           - delete_key(attributes, "time")
           - delete_key(attributes, "server_name")
@@ -51,15 +52,16 @@ processors:
           - delete_key(attributes, "http_referer")
           - delete_key(attributes, "http_user_agent")
           - delete_key(attributes, "http_x_forwarded_for")
-      # Error logs (non-JSON)
+      # Error logs (non-JSON, not already processed)
       - context: log
         conditions:
-          - not IsMatch(body, "^\\{.*")
+          - attributes["_processed"] == nil
         statements:
           - set(severity_text, "ERROR")
-      # Cleanup docker attributes (all logs)
+      # Cleanup
       - context: log
         statements:
+          - delete_key(attributes, "_processed")
           - delete_key(attributes, "log.file.name")
           - delete_key(attributes, "log.file.path")
           - delete_key(attributes, "log.iostream")
