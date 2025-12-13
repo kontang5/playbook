@@ -1,0 +1,50 @@
+# Routing: classify logs by service, filter internal, route to pipelines
+
+processors:
+  # Classify logs by service.name
+  transform/classify:
+    log_statements:
+      - context: log
+        statements:
+          - set(resource.attributes["service.name"], "nginx") where IsMatch(body, "^\\{\"time\":.*\"request\":.*\"status\":")
+          - set(resource.attributes["service.name"], "nginx") where IsMatch(body, ".*nginx.*|.*GET /.*HTTP.*|.*POST /.*HTTP.*")
+          - set(resource.attributes["service.name"], "postgres") where IsMatch(body, ".*LOG:.*|.*postgres.*|.*PostgreSQL.*|.*UTC \\[\\d+\\].*")
+          - set(resource.attributes["service.name"], "openobserve") where IsMatch(body, ".*openobserve.*|.*actix_web.*")
+          - set(resource.attributes["service.name"], "otel-collector") where IsMatch(body, ".*otelcol.*|.*otel.*collector.*")
+
+  # Drop all internal service logs
+  filter/internal:
+    logs:
+      log_record:
+        - 'resource.attributes["service.name"] == "openobserve"'
+        - 'resource.attributes["service.name"] == "otel-collector"'
+
+connectors:
+  routing/logs:
+    default_pipelines: [logs/other]
+    error_mode: ignore
+    table:
+      - statement: route() where resource.attributes["service.name"] == "nginx"
+        pipelines: [logs/nginx]
+      - statement: route() where resource.attributes["service.name"] == "postgres"
+        pipelines: [logs/database]
+
+exporters:
+  otlphttp/other:
+    endpoint: http://openobserve:5080/api/default
+    headers:
+      Authorization: Basic ${ZO_INGESTION_TOKEN}
+      stream-name: other
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    logs/docker:
+      receivers: [filelog/docker]
+      processors: [memory_limiter, transform/classify, filter/internal, batch]
+      exporters: [routing/logs]
+    logs/other:
+      receivers: [routing/logs]
+      processors: [batch]
+      exporters: [otlphttp/other]

@@ -1,0 +1,58 @@
+const {NodeSDK} = require('@opentelemetry/sdk-node');
+const {getNodeAutoInstrumentations} = require('@opentelemetry/auto-instrumentations-node');
+
+const {resource} = require('./config');
+const {traceExporter} = require('./traces');
+const {initLoggerProvider, createLogger} = require('./logs');
+const {metricReader, metricViews, initMetrics, trackRequest} = require('./metrics');
+
+// Initialize logger provider
+const loggerProvider = initLoggerProvider(resource);
+
+// Create SDK
+const sdk = new NodeSDK({
+    resource,
+    traceExporter,
+    metricReader,
+    views: metricViews,
+    instrumentations: [
+        getNodeAutoInstrumentations({
+            // Disable noisy/unnecessary instrumentations
+            '@opentelemetry/instrumentation-fs': {enabled: false},
+            '@opentelemetry/instrumentation-dns': {enabled: false},
+            '@opentelemetry/instrumentation-net': {enabled: false},
+            // Disable runtime metrics (v8js_*, nodejs_eventloop_*)
+            '@opentelemetry/instrumentation-runtime-node': {enabled: false},
+            // Drop Express middleware spans (expressInit, query, etc.)
+            '@opentelemetry/instrumentation-express': {
+                ignoreLayersType: ['middleware'],
+            },
+        }),
+    ],
+});
+
+// Start SDK
+sdk.start();
+
+// Initialize metrics after SDK starts
+initMetrics();
+
+// Create logger
+const logger = createLogger();
+
+// Graceful shutdown
+const shutdown = () => {
+    sdk.shutdown()
+        .then(() => console.log('OTel SDK shut down'))
+        .catch((err) => console.error('Error shutting down SDK', err))
+        .finally(() => process.exit(0));
+};
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
+
+module.exports = {
+    logger,
+    trackRequest,
+    loggerProvider,
+};

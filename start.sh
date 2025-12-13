@@ -21,7 +21,7 @@ echo "PostgreSQL is ready!"
 
 echo ""
 echo "=== Starting Backend ==="
-docker compose -f backend/demo/docker-compose.yml up -d --build
+docker compose -f application/demo/docker-compose.yml up -d --build
 
 echo ""
 echo "=== Starting Nginx ==="

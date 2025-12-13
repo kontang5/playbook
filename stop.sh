@@ -12,7 +12,7 @@ echo "Stopping Nginx..."
 docker compose -f nginx/docker-compose.yml down
 
 echo "Stopping Backend..."
-docker compose -f backend/demo/docker-compose.yml down
+docker compose -f application/demo/docker-compose.yml down
 
 echo "Stopping Database..."
 docker compose -f database/docker-compose.yml down
