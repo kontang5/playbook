@@ -1,3 +1,7 @@
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
 receivers:
   otlp:
     protocols:
@@ -16,6 +20,7 @@ exporters:
       Authorization: Basic {{ (openobserve_user + ':' + openobserve_password) | b64encode }}
 
 service:
+  extensions: [health_check]
   pipelines:
     traces:
       receivers: [otlp]

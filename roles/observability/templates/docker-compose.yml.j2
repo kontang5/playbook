@@ -10,6 +10,11 @@ services:
       ZO_ROOT_USER_PASSWORD: {{ openobserve_password }}
     volumes:
       - openobserve_data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   otel-collector:
     image: {{ otel_collector_image }}
@@ -18,10 +23,12 @@ services:
     ports:
       - "{{ otel_collector_grpc_port }}:4317"
       - "{{ otel_collector_http_port }}:4318"
+      - "13133:13133"
     volumes:
       - ./otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
     depends_on:
-      - openobserve
+      openobserve:
+        condition: service_healthy
 
 volumes:
   openobserve_data:

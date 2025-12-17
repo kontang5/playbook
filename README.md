@@ -8,6 +8,9 @@ Ansible playbooks for server setup on macOS
 # Install Ansible
 brew install ansible
 
+# Install dependencies
+ansible-galaxy collection install -r requirements.yml
+
 # Run playbook
 ansible-playbook playbook.yml --ask-become-pass
 ```
@@ -28,6 +31,15 @@ Enable in `config.yml`:
 ```yaml
 enable_lmstudio: true
 enable_redis: true
+```
+
+### Run Specific Roles
+
+Use tags to run specific roles:
+
+```bash
+ansible-playbook playbook.yml --tags nginx
+ansible-playbook playbook.yml --tags postgresql,redis
 ```
 
 ## Roles

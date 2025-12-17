@@ -1,0 +1,13 @@
+---
+galaxy_info:
+  role_name: lmstudio
+  description: Install LM Studio for local AI models
+  author: kontango
+  license: MIT
+  min_ansible_version: "2.9"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+dependencies: []

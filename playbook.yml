@@ -5,13 +5,21 @@
     - config.yml
 
   roles:
-    - common
-    - orbstack
+    - role: common
+      tags: common
+    - role: orbstack
+      tags: orbstack
     - role: lmstudio
+      tags: lmstudio
       when: enable_lmstudio | default(false)
-    - jenkins
-    - nginx
-    - postgresql
+    - role: jenkins
+      tags: jenkins
+    - role: nginx
+      tags: nginx
+    - role: postgresql
+      tags: postgresql
     - role: redis
+      tags: redis
       when: enable_redis | default(false)
-    - observability
+    - role: observability
+      tags: observability

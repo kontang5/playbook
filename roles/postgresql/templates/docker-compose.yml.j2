@@ -11,6 +11,11 @@ services:
       POSTGRES_DB: {{ postgresql_db }}
     volumes:
       - postgresql_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U {{ postgresql_user }}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   postgresql_data:
