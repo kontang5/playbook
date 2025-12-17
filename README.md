@@ -23,17 +23,16 @@ cp default.config.yml config.yml
 
 ## Roles
 
-| Role | Description |
-|------|-------------|
-| common | neovim, mise, httpie, curl, zsh plugins, ssh |
-| orbstack | OrbStack (Docker alternative) |
-| lmstudio | LM Studio |
-| nodejs | Node.js |
-| jdk | JDK |
-| nginx | Nginx reverse proxy |
-| postgresql | PostgreSQL database |
-| redis | Redis cache (optional) |
-| observability | OpenObserve + OTel Collector |
+| Role          | Description                                  |
+|---------------|----------------------------------------------|
+| common        | neovim, mise, httpie, curl, zsh plugins, ssh |
+| orbstack      | OrbStack (Docker alternative)                |
+| lmstudio      | LM Studio (optional)                         |
+| jenkins       | Jenkins CI/CD server                         |
+| nginx         | Nginx reverse proxy                          |
+| postgresql    | PostgreSQL database                          |
+| redis         | Redis cache (optional)                       |
+| observability | OpenObserve + OTel Collector                 |
 
 ## Structure
 
@@ -48,15 +47,24 @@ playbook/
     ├── common/
     ├── orbstack/
     ├── lmstudio/
-    ├── nodejs/
-    ├── jdk/
+    ├── jenkins/
     ├── nginx/
     ├── postgresql/
     ├── redis/
     └── observability/
 ```
 
+## Jenkins Setup
+
+After running the playbook, Jenkins will be available at `http://localhost:8080`
+
+Get initial admin password:
+```bash
+docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
+```
+
 ## Reference
 
 - [Ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html)
+- [Jenkins](https://www.jenkins.io/doc/)
 

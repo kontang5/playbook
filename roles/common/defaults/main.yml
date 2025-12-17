@@ -20,13 +20,13 @@ ssh_config: |
   Host *
     AddKeysToAgent yes
     UseKeychain yes
-    IdentityFile ~/.ssh/id_ed25519
+    IdentityFile {{ ssh_key_path }}
 
   Host mac-server
-    HostName 192.168.1.100
-    User admin
+    HostName {{ ansible_default_ipv4.address }}
+    User {{ ansible_user_id }}
     Port 22
-    IdentityFile ~/.ssh/id_ed25519
+    IdentityFile {{ ssh_key_path }}
 
   Host github.com
-    IdentityFile ~/.ssh/id_ed25519
+    IdentityFile {{ ssh_key_path }}

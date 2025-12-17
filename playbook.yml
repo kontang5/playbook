@@ -10,8 +10,7 @@
     - orbstack
     - role: lmstudio
       when: enable_lmstudio | default(false)
-    - nodejs
-    - jdk
+    - jenkins
     - nginx
     - postgresql
     - role: redis

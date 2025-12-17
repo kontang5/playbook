@@ -1,0 +1,21 @@
+---
+- name: Create jenkins directory
+  file:
+    path: "{{ jenkins_path }}"
+    state: directory
+
+- name: Copy docker-compose.yml
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ jenkins_path }}/docker-compose.yml"
+
+- name: Start Jenkins
+  shell: docker-compose up -d
+  args:
+    chdir: "{{ jenkins_path }}"
+
+- name: Show Jenkins setup info
+  debug:
+    msg: |
+      Jenkins is starting at http://localhost:{{ jenkins_port }}
+      Initial admin password: docker exec {{ jenkins_container_name }} cat /var/jenkins_home/secrets/initialAdminPassword

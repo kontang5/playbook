@@ -1,0 +1,14 @@
+services:
+  jenkins:
+    image: {{ jenkins_image }}
+    container_name: {{ jenkins_container_name }}
+    restart: unless-stopped
+    ports:
+      - "{{ jenkins_port }}:8080"
+      - "{{ jenkins_agent_port }}:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  jenkins_home:
