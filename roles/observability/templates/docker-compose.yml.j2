@@ -1,0 +1,27 @@
+services:
+  openobserve:
+    image: {{ openobserve_image }}
+    container_name: {{ openobserve_container_name }}
+    restart: unless-stopped
+    ports:
+      - "{{ openobserve_port }}:5080"
+    environment:
+      ZO_ROOT_USER_EMAIL: {{ openobserve_user }}
+      ZO_ROOT_USER_PASSWORD: {{ openobserve_password }}
+    volumes:
+      - openobserve_data:/data
+
+  otel-collector:
+    image: {{ otel_collector_image }}
+    container_name: {{ otel_collector_container_name }}
+    restart: unless-stopped
+    ports:
+      - "{{ otel_collector_grpc_port }}:4317"
+      - "{{ otel_collector_http_port }}:4318"
+    volumes:
+      - ./otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+    depends_on:
+      - openobserve
+
+volumes:
+  openobserve_data:

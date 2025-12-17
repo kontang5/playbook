@@ -1,2 +1,28 @@
 ---
-# Observability tasks: OpenObserve + OTel Collector
+- name: Create observability directory
+  file:
+    path: "{{ observability_path }}"
+    state: directory
+
+- name: Copy docker-compose.yml
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ observability_path }}/docker-compose.yml"
+
+- name: Copy otel-collector config
+  template:
+    src: otel-collector.yaml.j2
+    dest: "{{ observability_path }}/otel-collector.yaml"
+
+- name: Start Observability stack
+  shell: docker-compose up -d
+  args:
+    chdir: "{{ observability_path }}"
+
+- name: Show Observability info
+  debug:
+    msg: |
+      OpenObserve: http://localhost:{{ openobserve_port }}
+      User: {{ openobserve_user }}
+      Password: {{ openobserve_password }}
+      OTel Collector: grpc://localhost:{{ otel_collector_grpc_port }}, http://localhost:{{ otel_collector_http_port }}
