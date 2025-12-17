@@ -3,3 +3,36 @@
   homebrew:
     name: "{{ homebrew_packages }}"
     state: present
+
+- name: Ensure .ssh directory exists
+  file:
+    path: "~/.ssh"
+    state: directory
+    mode: "0700"
+
+- name: Generate SSH key
+  openssh_keypair:
+    path: "{{ ssh_key_path }}"
+    type: "{{ ssh_key_type }}"
+    mode: "0600"
+
+- name: Configure SSH client
+  copy:
+    content: "{{ ssh_config }}"
+    dest: "~/.ssh/config"
+    mode: "0600"
+
+- name: Ensure authorized_keys exists
+  file:
+    path: "~/.ssh/authorized_keys"
+    state: touch
+    mode: "0600"
+
+- name: Configure sshd
+  become: yes
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^#?{{ item.key }}"
+    line: "{{ item.key }} {{ item.value }}"
+  loop: "{{ sshd_config | dict2items }}"
+  notify: Restart sshd

@@ -25,14 +25,14 @@ cp default.config.yml config.yml
 
 | Role | Description |
 |------|-------------|
-| common | neovim, mise, httpie, curl, zsh plugins |
+| common | neovim, mise, httpie, curl, zsh plugins, ssh |
 | orbstack | OrbStack (Docker alternative) |
 | lmstudio | LM Studio |
 | nodejs | Node.js |
 | jdk | JDK |
 | nginx | Nginx reverse proxy |
 | postgresql | PostgreSQL database |
-| redis | Redis cache |
+| redis | Redis cache (optional) |
 | observability | OpenObserve + OTel Collector |
 
 ## Structure

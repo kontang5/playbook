@@ -6,3 +6,27 @@ homebrew_packages:
   - curl
   - zsh-autosuggestions
   - zsh-syntax-highlighting
+
+ssh_key_type: ed25519
+ssh_key_path: "~/.ssh/id_ed25519"
+
+sshd_config:
+  PasswordAuthentication: "no"
+  PubkeyAuthentication: "yes"
+  PermitRootLogin: "no"
+  PermitEmptyPasswords: "no"
+
+ssh_config: |
+  Host *
+    AddKeysToAgent yes
+    UseKeychain yes
+    IdentityFile ~/.ssh/id_ed25519
+
+  Host mac-server
+    HostName 192.168.1.100
+    User admin
+    Port 22
+    IdentityFile ~/.ssh/id_ed25519
+
+  Host github.com
+    IdentityFile ~/.ssh/id_ed25519
