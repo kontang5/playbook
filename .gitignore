@@ -1,0 +1,14 @@
+# Ansible
+*.retry
+
+# Operating Systems
+## MacOS
+.DS_Store
+
+# IDE
+.idea/
+
+# Environment variables
+config.yml
+
+# Manually managed files

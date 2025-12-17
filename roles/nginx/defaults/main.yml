@@ -1,6 +1,6 @@
 ---
 nginx_path: ~/Sites/nginx
-nginx_image: nginx:alpine
+nginx_image: nginx:1.28.0-alpine
 nginx_container_name: nginx
 nginx_http_port: 80
 nginx_https_port: 443

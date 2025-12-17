@@ -47,14 +47,14 @@ enable_redis: true
 
 After running the playbook:
 
-| Service       | URL                        | Port  |
-|---------------|----------------------------|-------|
-| Jenkins       | http://localhost:8080      | 8080  |
-| Nginx         | http://localhost           | 80    |
-| PostgreSQL    | localhost                  | 5432  |
-| Redis         | localhost                  | 6379  |
-| OpenObserve   | http://localhost:5080      | 5080  |
-| OTel Collector| grpc://localhost:4317      | 4317  |
+| Service        | URL                   | Port | Version                                      |
+|----------------|-----------------------|------|----------------------------------------------|
+| Jenkins        | http://localhost:8080 | 8080 | jenkins/jenkins:2.479.3-lts                  |
+| Nginx          | http://localhost      | 80   | nginx:1.28.0-alpine                          |
+| PostgreSQL     | localhost             | 5432 | postgres:18-alpine                           |
+| Redis          | localhost             | 6379 | redis:8.4.0-alpine                           |
+| OpenObserve    | http://localhost:5080 | 5080 | openobserve/openobserve:v0.30.0              |
+| OTel Collector | grpc://localhost:4317 | 4317 | otel/opentelemetry-collector-contrib:0.142.0 |
 
 ### Directory Structure
 
@@ -69,7 +69,9 @@ After running the playbook:
 └── observability/
 ```
 
-## Jenkins Setup
+## Setup
+
+### Jenkins
 
 Get initial admin password:
 
@@ -77,7 +79,7 @@ Get initial admin password:
 docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
 ```
 
-## Observability Setup
+### Observability
 
 OpenObserve credentials are configured in `config.yml`:
 

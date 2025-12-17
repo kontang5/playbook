@@ -1,6 +1,6 @@
 ---
 jenkins_path: ~/Sites/jenkins
-jenkins_image: jenkins/jenkins:lts
+jenkins_image: jenkins/jenkins:2.479.3-lts
 jenkins_container_name: jenkins
 jenkins_port: 8080
 jenkins_agent_port: 50000
