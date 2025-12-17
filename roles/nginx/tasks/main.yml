@@ -1,2 +1,33 @@
 ---
-# Nginx tasks
+- name: Create nginx directory
+  file:
+    path: "{{ nginx_path }}"
+    state: directory
+
+- name: Create nginx subdirectories
+  file:
+    path: "{{ nginx_path }}/{{ item }}"
+    state: directory
+  loop:
+    - conf.d
+    - html
+
+- name: Copy docker-compose.yml
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ nginx_path }}/docker-compose.yml"
+
+- name: Copy nginx config
+  template:
+    src: default.conf.j2
+    dest: "{{ nginx_path }}/conf.d/default.conf"
+
+- name: Create index.html
+  copy:
+    content: "<h1>Welcome</h1>"
+    dest: "{{ nginx_path }}/html/index.html"
+
+- name: Start Nginx
+  shell: docker-compose up -d
+  args:
+    chdir: "{{ nginx_path }}"

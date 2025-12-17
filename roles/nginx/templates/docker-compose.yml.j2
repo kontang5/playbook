@@ -1,0 +1,11 @@
+services:
+  nginx:
+    image: {{ nginx_image }}
+    container_name: {{ nginx_container_name }}
+    restart: unless-stopped
+    ports:
+      - "{{ nginx_http_port }}:80"
+      - "{{ nginx_https_port }}:443"
+    volumes:
+      - ./conf.d:/etc/nginx/conf.d:ro
+      - ./html:/usr/share/nginx/html:ro
