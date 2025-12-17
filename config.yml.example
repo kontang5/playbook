@@ -1,0 +1,16 @@
+---
+# Configuration values
+# Usage: cp config.yml.example config.yml
+
+# Optional features
+enable_lmstudio: false
+enable_redis: false
+
+# PostgreSQL credentials
+postgresql_user: postgres
+postgresql_password: "change_me"
+postgresql_db: postgres
+
+# OpenObserve credentials
+openobserve_user: admin@example.com
+openobserve_password: "change_me"

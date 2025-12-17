@@ -2,7 +2,6 @@
 - name: Server setup
   hosts: local
   vars_files:
-    - default.config.yml
     - config.yml
 
   roles:

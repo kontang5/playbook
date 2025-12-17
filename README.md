@@ -17,8 +17,8 @@ ansible-playbook playbook.yml --ask-become-pass
 Copy and customize your configuration:
 
 ```bash
-cp default.config.yml config.yml
-# Edit config.yml with your preferences
+cp config.yml.example config.yml
+# Edit config.yml with your credentials and preferences
 ```
 
 ### Optional Roles
@@ -79,11 +79,11 @@ docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
 
 ## Observability Setup
 
-OpenObserve credentials (default):
+OpenObserve credentials are configured in `config.yml`:
 
 - URL: http://localhost:5080
-- User: admin@example.com
-- Password: admin
+- User: `openobserve_user`
+- Password: `openobserve_password`
 
 Send telemetry to OTel Collector:
 
