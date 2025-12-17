@@ -9,6 +9,8 @@
     - common
     - orbstack
     - lmstudio
+    - nodejs
+    - jdk
     - nginx
     - postgresql
     - redis

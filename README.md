@@ -28,6 +28,8 @@ cp default.config.yml config.yml
 | common | Homebrew and basic setup |
 | orbstack | OrbStack (Docker alternative) |
 | lmstudio | LM Studio |
+| nodejs | Node.js |
+| jdk | JDK |
 | nginx | Nginx reverse proxy |
 | postgresql | PostgreSQL database |
 | redis | Redis cache |
@@ -46,6 +48,8 @@ playbook/
     ├── common/
     ├── orbstack/
     ├── lmstudio/
+    ├── nodejs/
+    ├── jdk/
     ├── nginx/
     ├── postgresql/
     ├── redis/
