@@ -1,0 +1,14 @@
+---
+- name: Setup local development environment
+  hosts: local
+  vars_files:
+    - default.config.yml
+    - config.yml
+
+  roles:
+    - common
+    - orbstack
+    - lmstudio
+    - nginx
+    - postgresql
+    - redis

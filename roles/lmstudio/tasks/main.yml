@@ -1,0 +1,5 @@
+---
+- name: Install LM Studio
+  homebrew_cask:
+    name: lm-studio
+    state: present
