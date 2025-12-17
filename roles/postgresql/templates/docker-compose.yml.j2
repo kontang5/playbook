@@ -1,0 +1,16 @@
+services:
+  postgresql:
+    image: {{ postgresql_image }}
+    container_name: {{ postgresql_container_name }}
+    restart: unless-stopped
+    ports:
+      - "{{ postgresql_port }}:5432"
+    environment:
+      POSTGRES_USER: {{ postgresql_user }}
+      POSTGRES_PASSWORD: {{ postgresql_password }}
+      POSTGRES_DB: {{ postgresql_db }}
+    volumes:
+      - postgresql_data:/var/lib/postgresql/data
+
+volumes:
+  postgresql_data:

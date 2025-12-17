@@ -1,2 +1,15 @@
 ---
-# PostgreSQL tasks
+- name: Create postgresql directory
+  file:
+    path: "{{ postgresql_path }}"
+    state: directory
+
+- name: Copy docker-compose.yml
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ postgresql_path }}/docker-compose.yml"
+
+- name: Start PostgreSQL
+  shell: docker-compose up -d
+  args:
+    chdir: "{{ postgresql_path }}"

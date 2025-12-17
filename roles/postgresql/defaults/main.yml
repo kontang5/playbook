@@ -1,2 +1,8 @@
 ---
-# PostgreSQL defaults
+postgresql_path: ~/Sites/postgresql
+postgresql_image: postgres:16-alpine
+postgresql_container_name: postgresql
+postgresql_port: 5432
+postgresql_user: postgres
+postgresql_password: postgres
+postgresql_db: postgres
