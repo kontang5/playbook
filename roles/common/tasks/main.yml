@@ -1,2 +1,5 @@
 ---
-# Common tasks: Homebrew, basic setup
+- name: Install Homebrew packages
+  homebrew:
+    name: "{{ homebrew_packages }}"
+    state: present

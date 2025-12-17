@@ -1,2 +1,8 @@
 ---
-# Common defaults
+homebrew_packages:
+  - neovim
+  - mise
+  - httpie
+  - curl
+  - zsh-autosuggestions
+  - zsh-syntax-highlighting

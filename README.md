@@ -25,7 +25,7 @@ cp default.config.yml config.yml
 
 | Role | Description |
 |------|-------------|
-| common | Homebrew and basic setup |
+| common | neovim, mise, httpie, curl, zsh plugins |
 | orbstack | OrbStack (Docker alternative) |
 | lmstudio | LM Studio |
 | nodejs | Node.js |
