@@ -1,5 +1,5 @@
 ---
-- name: Setup local development environment
+- name: Server setup
   hosts: local
   vars_files:
     - default.config.yml
@@ -8,10 +8,12 @@
   roles:
     - common
     - orbstack
-    - lmstudio
+    - role: lmstudio
+      when: enable_lmstudio | default(false)
     - nodejs
     - jdk
     - nginx
     - postgresql
-    - redis
+    - role: redis
+      when: enable_redis | default(false)
     - observability
