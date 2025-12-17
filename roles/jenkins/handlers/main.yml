@@ -1,0 +1,5 @@
+---
+- name: Restart jenkins
+  shell: docker-compose restart
+  args:
+    chdir: "{{ jenkins_path }}"

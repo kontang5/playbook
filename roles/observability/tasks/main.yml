@@ -8,16 +8,20 @@
   template:
     src: docker-compose.yml.j2
     dest: "{{ observability_path }}/docker-compose.yml"
+  notify: Restart observability
 
 - name: Copy otel-collector config
   template:
     src: otel-collector.yaml.j2
     dest: "{{ observability_path }}/otel-collector.yaml"
+  notify: Restart observability
 
 - name: Start Observability stack
   shell: docker-compose up -d
   args:
     chdir: "{{ observability_path }}"
+  register: observability_start
+  changed_when: "'Started' in observability_start.stdout or 'Created' in observability_start.stdout"
 
 - name: Show Observability info
   debug:

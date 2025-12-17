@@ -8,8 +8,11 @@
   template:
     src: docker-compose.yml.j2
     dest: "{{ redis_path }}/docker-compose.yml"
+  notify: Restart redis
 
 - name: Start Redis
   shell: docker-compose up -d
   args:
     chdir: "{{ redis_path }}"
+  register: redis_start
+  changed_when: "'Started' in redis_start.stdout or 'Created' in redis_start.stdout"

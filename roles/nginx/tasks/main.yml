@@ -16,11 +16,13 @@
   template:
     src: docker-compose.yml.j2
     dest: "{{ nginx_path }}/docker-compose.yml"
+  notify: Restart nginx
 
 - name: Copy nginx config
   template:
     src: default.conf.j2
     dest: "{{ nginx_path }}/conf.d/default.conf"
+  notify: Restart nginx
 
 - name: Create index.html
   copy:
@@ -31,3 +33,5 @@
   shell: docker-compose up -d
   args:
     chdir: "{{ nginx_path }}"
+  register: nginx_start
+  changed_when: "'Started' in nginx_start.stdout or 'Created' in nginx_start.stdout"

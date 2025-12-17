@@ -1,0 +1,5 @@
+---
+- name: Restart redis
+  shell: docker-compose restart
+  args:
+    chdir: "{{ redis_path }}"

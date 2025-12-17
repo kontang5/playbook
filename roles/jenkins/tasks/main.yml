@@ -8,11 +8,14 @@
   template:
     src: docker-compose.yml.j2
     dest: "{{ jenkins_path }}/docker-compose.yml"
+  notify: Restart jenkins
 
 - name: Start Jenkins
   shell: docker-compose up -d
   args:
     chdir: "{{ jenkins_path }}"
+  register: jenkins_start
+  changed_when: "'Started' in jenkins_start.stdout or 'Created' in jenkins_start.stdout"
 
 - name: Show Jenkins setup info
   debug:
