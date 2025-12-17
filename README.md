@@ -9,7 +9,7 @@ Ansible playbooks for server setup on macOS
 brew install ansible
 
 # Run playbook
-ansible-playbook playbook.yml
+ansible-playbook playbook.yml --ask-become-pass
 ```
 
 ## Configuration
@@ -19,6 +19,15 @@ Copy and customize your configuration:
 ```bash
 cp default.config.yml config.yml
 # Edit config.yml with your preferences
+```
+
+### Optional Roles
+
+Enable in `config.yml`:
+
+```yaml
+enable_lmstudio: true
+enable_redis: true
 ```
 
 ## Roles
@@ -34,37 +43,57 @@ cp default.config.yml config.yml
 | redis         | Redis cache (optional)                       |
 | observability | OpenObserve + OTel Collector                 |
 
-## Structure
+## Services
+
+After running the playbook:
+
+| Service       | URL                        | Port  |
+|---------------|----------------------------|-------|
+| Jenkins       | http://localhost:8080      | 8080  |
+| Nginx         | http://localhost           | 80    |
+| PostgreSQL    | localhost                  | 5432  |
+| Redis         | localhost                  | 6379  |
+| OpenObserve   | http://localhost:5080      | 5080  |
+| OTel Collector| grpc://localhost:4317      | 4317  |
+
+### Directory Structure
 
 ```
-playbook/
-├── ansible.cfg
-├── inventory
-├── playbook.yml
-├── config.yml
-├── default.config.yml
-└── roles/
-    ├── common/
-    ├── orbstack/
-    ├── lmstudio/
-    ├── jenkins/
-    ├── nginx/
-    ├── postgresql/
-    ├── redis/
-    └── observability/
+~/Sites/
+├── jenkins/
+├── nginx/
+│   ├── conf.d/
+│   └── html/
+├── postgresql/
+├── redis/
+└── observability/
 ```
 
 ## Jenkins Setup
 
-After running the playbook, Jenkins will be available at `http://localhost:8080`
-
 Get initial admin password:
+
 ```bash
 docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
+```
+
+## Observability Setup
+
+OpenObserve credentials (default):
+
+- URL: http://localhost:5080
+- User: admin@example.com
+- Password: admin
+
+Send telemetry to OTel Collector:
+
+```yaml
+OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4317
 ```
 
 ## Reference
 
 - [Ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html)
 - [Jenkins](https://www.jenkins.io/doc/)
-
+- [OpenObserve](https://openobserve.ai/docs/)
+- [OpenTelemetry](https://opentelemetry.io/docs/)
