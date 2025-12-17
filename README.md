@@ -27,10 +27,11 @@ cp default.config.yml config.yml
 |------|-------------|
 | common | Homebrew and basic setup |
 | orbstack | OrbStack (Docker alternative) |
-| lmstudio | LM Studio for local LLMs |
-| nginx | Nginx via Docker Compose |
-| postgresql | PostgreSQL via Docker Compose |
-| redis | Redis via Docker Compose |
+| lmstudio | LM Studio |
+| nginx | Nginx reverse proxy |
+| postgresql | PostgreSQL database |
+| redis | Redis cache |
+| observability | OpenObserve + OTel Collector |
 
 ## Structure
 
@@ -47,7 +48,8 @@ playbook/
     ├── lmstudio/
     ├── nginx/
     ├── postgresql/
-    └── redis/
+    ├── redis/
+    └── observability/
 ```
 
 ## Reference
