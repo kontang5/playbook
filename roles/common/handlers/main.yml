@@ -1,6 +1,6 @@
 ---
 - name: Restart sshd
   become: yes
-  service:
-    name: com.openssh.sshd
-    state: restarted
+  shell: |
+    launchctl bootout system/com.openssh.sshd 2>/dev/null || true
+    launchctl bootstrap system /System/Library/LaunchDaemons/ssh.plist

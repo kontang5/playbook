@@ -15,6 +15,7 @@ sshd_config:
   PubkeyAuthentication: "yes"
   PermitRootLogin: "no"
   PermitEmptyPasswords: "no"
+  KbdInteractiveAuthentication: "no"
 
 ssh_config: |
   Host *
