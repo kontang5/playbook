@@ -1,5 +1,5 @@
 ---
-observability_path: ~/Sites/observability
+observability_path: "{{ base_path }}/observability"
 
 openobserve_image: openobserve/openobserve:v0.30.0
 openobserve_container_name: openobserve

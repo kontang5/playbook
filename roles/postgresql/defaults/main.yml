@@ -1,5 +1,5 @@
 ---
-postgresql_path: ~/Sites/postgresql
+postgresql_path: "{{ base_path }}/postgresql"
 postgresql_image: postgres:18-alpine
 postgresql_container_name: postgresql
 postgresql_port: 5432

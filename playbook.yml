@@ -2,6 +2,18 @@
 - name: Server setup
   hosts: local
   gather_facts: true
+
+  pre_tasks:
+    - name: Check config.yml exists
+      stat:
+        path: "{{ playbook_dir }}/config.yml"
+      register: config_file
+
+    - name: Fail if config.yml is missing
+      fail:
+        msg: "config.yml not found. Copy config.yml.example to config.yml and update values."
+      when: not config_file.stat.exists
+
   vars_files:
     - config.yml
 

@@ -17,10 +17,12 @@
     mode: "0600"
 
 - name: Configure SSH client
-  copy:
-    content: "{{ ssh_config }}"
-    dest: "~/.ssh/config"
+  blockinfile:
+    path: "~/.ssh/config"
+    create: yes
     mode: "0600"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK"
+    block: "{{ ssh_config }}"
 
 - name: Ensure authorized_keys exists
   file:
@@ -34,5 +36,6 @@
     path: /etc/ssh/sshd_config
     regexp: "^#?{{ item.key }}"
     line: "{{ item.key }} {{ item.value }}"
+    backup: yes
   loop: "{{ sshd_config | dict2items }}"
   notify: Restart sshd
