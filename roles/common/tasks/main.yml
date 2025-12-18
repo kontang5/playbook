@@ -1,4 +1,6 @@
 ---
+# Package Installation
+
 - name: Install Homebrew packages
   homebrew:
     name: "{{ homebrew_packages }}"
@@ -29,6 +31,14 @@
     path: "~/.ssh/authorized_keys"
     state: touch
     mode: "0600"
+    access_time: preserve
+    modification_time: preserve
+
+- name: Enable Remote Login (SSH)
+  become: yes
+  command: systemsetup -setremotelogin on
+  changed_when: false
+  ignore_errors: true  # Requires Full Disk Access
 
 - name: Configure sshd
   become: yes
@@ -39,3 +49,55 @@
     backup: yes
   loop: "{{ sshd_config | dict2items }}"
   notify: Restart sshd
+
+# macOS Server Optimizations
+
+- name: Disable Spotlight indexing
+  become: yes
+  command: mdutil -a -i off
+  changed_when: false
+
+- name: Disable App Nap
+  command: defaults write NSGlobalDomain NSAppSleepDisabled -bool YES
+  changed_when: false
+
+- name: Reduce transparency
+  command: defaults write com.apple.universalaccess reduceTransparency -bool true
+  changed_when: false
+  ignore_errors: true
+
+- name: Disable sleep
+  become: yes
+  command: pmset -a sleep 0 displaysleep 0 disksleep 0
+  changed_when: false
+
+- name: Enable restart after power failure
+  become: yes
+  command: pmset -a autorestart 1
+  changed_when: false
+
+- name: Disable Siri
+  command: defaults write com.apple.assistant.support "Assistant Enabled" -bool false
+  changed_when: false
+  ignore_errors: true
+
+- name: Disable Time Machine
+  become: yes
+  command: tmutil disable
+  changed_when: false
+
+- name: Enable firewall
+  become: yes
+  command: /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on
+  changed_when: false
+
+- name: Disable AirDrop
+  command: defaults write com.apple.NetworkBrowser DisableAirDrop -bool YES
+  changed_when: false
+  ignore_errors: true
+
+- name: Disable Handoff
+  command: defaults -currentHost write com.apple.coreservices.useractivityd ActivityAdvertisingAllowed -bool false
+  changed_when: false
+  ignore_errors: true
+

@@ -23,8 +23,8 @@
 
 - name: Show Observability info
   debug:
-    msg: |
-      OpenObserve: http://localhost:{{ openobserve_port }}
-      User: {{ openobserve_user }}
-      Password: {{ openobserve_password }}
-      OTel Collector: grpc://localhost:{{ otel_collector_grpc_port }}, http://localhost:{{ otel_collector_http_port }}
+    msg:
+      - "OpenObserve: http://localhost:{{ openobserve_port }}"
+      - "User: {{ openobserve_user }}"
+      - "Password: {{ openobserve_password }}"
+      - "OTel Collector: grpc://localhost:{{ otel_collector_grpc_port }}, http://localhost:{{ otel_collector_http_port }}"

@@ -14,9 +14,10 @@
   community.docker.docker_compose_v2:
     project_src: "{{ jenkins_path }}"
     state: present
+    docker_cli: "{{ ansible_facts['env']['HOME'] }}/.orbstack/bin/docker"
 
 - name: Show Jenkins setup info
   debug:
-    msg: |
-      Jenkins is starting at http://localhost:{{ jenkins_port }}
-      Initial admin password: docker exec {{ jenkins_container_name }} cat /var/jenkins_home/secrets/initialAdminPassword
+    msg:
+      - "Jenkins: http://localhost:{{ jenkins_port }}"
+      - "Initial admin password: docker exec {{ jenkins_container_name }} cat /var/jenkins_home/secrets/initialAdminPassword"

@@ -3,3 +3,7 @@
   homebrew_cask:
     name: orbstack
     state: present
+
+- name: Start OrbStack
+  command: orb start
+  changed_when: false
