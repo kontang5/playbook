@@ -11,11 +11,9 @@
   notify: Restart jenkins
 
 - name: Start Jenkins
-  shell: docker-compose up -d
-  args:
-    chdir: "{{ jenkins_path }}"
-  register: jenkins_start
-  changed_when: "'Started' in jenkins_start.stdout or 'Created' in jenkins_start.stdout"
+  community.docker.docker_compose_v2:
+    project_src: "{{ jenkins_path }}"
+    state: present
 
 - name: Show Jenkins setup info
   debug:

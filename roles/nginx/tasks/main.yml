@@ -30,8 +30,6 @@
     dest: "{{ nginx_path }}/html/index.html"
 
 - name: Start Nginx
-  shell: docker-compose up -d
-  args:
-    chdir: "{{ nginx_path }}"
-  register: nginx_start
-  changed_when: "'Started' in nginx_start.stdout or 'Created' in nginx_start.stdout"
+  community.docker.docker_compose_v2:
+    project_src: "{{ nginx_path }}"
+    state: present

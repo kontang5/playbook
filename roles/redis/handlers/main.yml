@@ -1,5 +1,5 @@
 ---
 - name: Restart redis
-  shell: docker-compose restart
-  args:
-    chdir: "{{ redis_path }}"
+  community.docker.docker_compose_v2:
+    project_src: "{{ redis_path }}"
+    state: restarted

@@ -11,8 +11,6 @@
   notify: Restart postgresql
 
 - name: Start PostgreSQL
-  shell: docker-compose up -d
-  args:
-    chdir: "{{ postgresql_path }}"
-  register: postgresql_start
-  changed_when: "'Started' in postgresql_start.stdout or 'Created' in postgresql_start.stdout"
+  community.docker.docker_compose_v2:
+    project_src: "{{ postgresql_path }}"
+    state: present

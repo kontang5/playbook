@@ -1,5 +1,5 @@
 ---
 - name: Restart nginx
-  shell: docker-compose restart
-  args:
-    chdir: "{{ nginx_path }}"
+  community.docker.docker_compose_v2:
+    project_src: "{{ nginx_path }}"
+    state: restarted

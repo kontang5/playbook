@@ -1,5 +1,5 @@
 ---
 - name: Restart jenkins
-  shell: docker-compose restart
-  args:
-    chdir: "{{ jenkins_path }}"
+  community.docker.docker_compose_v2:
+    project_src: "{{ jenkins_path }}"
+    state: restarted

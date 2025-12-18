@@ -17,11 +17,9 @@
   notify: Restart observability
 
 - name: Start Observability stack
-  shell: docker-compose up -d
-  args:
-    chdir: "{{ observability_path }}"
-  register: observability_start
-  changed_when: "'Started' in observability_start.stdout or 'Created' in observability_start.stdout"
+  community.docker.docker_compose_v2:
+    project_src: "{{ observability_path }}"
+    state: present
 
 - name: Show Observability info
   debug:

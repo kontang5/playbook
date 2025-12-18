@@ -1,6 +1,7 @@
 ---
 - name: Server setup
   hosts: local
+  gather_facts: true
   vars_files:
     - config.yml
 
